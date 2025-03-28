@@ -63,7 +63,7 @@
 
 
 \title{LIFTCOVER Documentation}
-\date{Mar 16, 2025}
+\date{Mar 28, 2025}
 \release{1.0.0}
 \author{Fabrizio Riguzzi}
 \newcommand{\sphinxlogo}{\vbox{}}
@@ -181,14 +181,14 @@ In this case, they need to be upgraded manually.
 \chapter{Syntax}
 \label{\detokenize{index:syntax}}
 \sphinxAtStartPar
-LIFTCOVER learns \sphinxstyleemphasis{liftable probabilistic logic programs} a restricted version of Logic programs with annotated disjunctions LPADs ({[}\hyperlink{cite.index:id24}{VV03}, \hyperlink{cite.index:id8}{VVB04}{]}). A HPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used.
+LIFTCOVER learns \sphinxstyleemphasis{liftable probabilistic logic programs} a restricted version of Logic programs with annotated disjunctions LPADs ({[}\hyperlink{cite.index:id24}{VV03}, \hyperlink{cite.index:id8}{VVB04}{]}). A LPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used.
 
 \sphinxAtStartPar
 A clause in such a program has a single head with the \sphinxstyleemphasis{target predicate} (the predicate you want to learn)
 and a body composed of \sphinxstyleemphasis{input predicates} or predicates defined by deterministic clauses (typically facts).
 
 \sphinxAtStartPar
-A general HPLP clause has the following form:
+A general LPLP clause has the following form:
 
 \begin{sphinxVerbatim}[commandchars=\\\{\}]
 \PYG{n}{h}\PYG{p}{:}\PYG{n}{p}\PYG{p}{:}\PYG{o}{\PYGZhy{}} \PYG{n}{b1}\PYG{p}{,}\PYG{n}{b2}\PYG{o}{.}\PYG{o}{.}\PYG{o}{.}\PYG{p}{,}\PYG{n}{bn}\PYG{o}{.}

@@ -78,12 +78,12 @@ Testing the installation
 Syntax 
 ==================
 
-LIFTCOVER learns *liftable probabilistic logic programs* a restricted version of Logic programs with annotated disjunctions LPADs (:cite:`VenVer03-TR,VenVer04-ICLP04-IC`). A HPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used. 
+LIFTCOVER learns *liftable probabilistic logic programs* a restricted version of Logic programs with annotated disjunctions LPADs (:cite:`VenVer03-TR,VenVer04-ICLP04-IC`). A LPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used. 
 
 A clause in such a program has a single head with the *target predicate* (the predicate you want to learn)
 and a body composed of *input predicates* or predicates defined by deterministic clauses (typically facts).
 
-A general HPLP clause has the following form: ::
+A general LPLP clause has the following form: ::
 
     h:p:- b1,b2...,bn.
 

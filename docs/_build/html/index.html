@@ -103,10 +103,10 @@ $ swipl
 </section>
 <section id="syntax">
 <h2>Syntax<a class="headerlink" href="#syntax" title="Link to this heading">¶</a></h2>
-<p>LIFTCOVER learns <em>liftable probabilistic logic programs</em> a restricted version of Logic programs with annotated disjunctions LPADs (<span id="id2">[<a class="reference internal" href="#id24" title="J. Vennekens and S. Verbaeten. Logic programs with annotated disjunctions. Technical Report CW386, K. U. Leuven, 2003.">VV03</a>, <a class="reference internal" href="#id8" title="J. Vennekens, S. Verbaeten, and M. Bruynooghe. Logic programs with annotated disjunctions. In International Conference on Logic Programming, volume 3131 of LNCS, 195-209. Springer, 2004.">VVB04</a>]</span>). A HPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used.</p>
+<p>LIFTCOVER learns <em>liftable probabilistic logic programs</em> a restricted version of Logic programs with annotated disjunctions LPADs (<span id="id2">[<a class="reference internal" href="#id24" title="J. Vennekens and S. Verbaeten. Logic programs with annotated disjunctions. Technical Report CW386, K. U. Leuven, 2003.">VV03</a>, <a class="reference internal" href="#id8" title="J. Vennekens, S. Verbaeten, and M. Bruynooghe. Logic programs with annotated disjunctions. In International Conference on Logic Programming, volume 3131 of LNCS, 195-209. Springer, 2004.">VVB04</a>]</span>). A LPLP is a set of annotated clauses whose head contain a single atom annotated with a probability. For the rest, the usual syntax of Prolog is used.</p>
 <p>A clause in such a program has a single head with the <em>target predicate</em> (the predicate you want to learn)
 and a body composed of <em>input predicates</em> or predicates defined by deterministic clauses (typically facts).</p>
-<p>A general HPLP clause has the following form:</p>
+<p>A general LPLP clause has the following form:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">h</span><span class="p">:</span><span class="n">p</span><span class="p">:</span><span class="o">-</span> <span class="n">b1</span><span class="p">,</span><span class="n">b2</span><span class="o">...</span><span class="p">,</span><span class="n">bn</span><span class="o">.</span>
 </pre></div>
 </div>
