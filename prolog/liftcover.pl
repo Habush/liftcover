@@ -199,7 +199,7 @@ test_lift(P,TestFolds,LL,AUCROC,ROC,AUCPR,PR):-
  * and in Results a list containing the probabilistic result for each query contained in TestFolds.
  */
 test_prob_lift(M:P,TestFolds,NPos,NNeg,CLL,Results) :-
-  write2(M,'Testing\n'),
+  % write2(M,'Testing\n'),
   make_dynamic(M),
   process_clauses(P,M,PRules),
   generate_clauses(PRules,M,0,Prog),
@@ -501,14 +501,38 @@ induce_parameters(M:Folds,R):-
   setrand(Seed),
   findall(Exs,(member(F,Folds),M:fold(F,Exs)),L),
   append(L,DB),
+  length(DB,N),
+  format(user_error, 'Number of examples ~w~n',[N]),
   statistics(walltime,[_,_]),
-  (M:bg(RBG0)->
-    process_clauses(RBG0,M,RBG),
-    generate_clauses_bg(RBG,ClBG),
-    assert_all(ClBG,M,ClBGRef)
-  ;
-    true
-  ),
+  % % (M:bg(RBG0)->
+  %   format(user_error, 'Loading background knowledge~n', []),
+  %   findall(F, bgc(F), Facts),
+  %   findall(R, rules(R), Rs),
+  %   append(Rs, Rules),
+  %   append(Facts, Rules, RBG0),
+  %   statistics(walltime, [_,CT0]),
+  %   CTS0 is CT0/1000.0,
+  %   format(user_error, 'Background knowledge loaded in ~w seconds~n', [CTS0]),
+  %   statistics(walltime,[_,_]),
+  %   format(user_error, 'Starting process_clauses~n', []),
+  %   process_clauses(RBG0,M,RBG),
+  %   statistics(walltime,[_,CT1]),
+  %   % format(user_error, 'Processed background clauses ~w~n', [RBG]),
+  %   CTS1 is CT1/1000.0,
+  %   format(user_error, 'process_clauses time: ~w seconds~n', [CTS1]),
+  %   format(user_error, 'Starting generate_clauses~n', []),
+  %   statistics(walltime,[_,_]),
+  %   generate_clauses_bg(RBG,ClBG),
+  %   statistics(walltime,[_,CT2]),
+  %   CTS2 is CT2/1000.0,
+  %   format(user_error, 'generate_clauses time: ~w seconds~n', [CTS2]),
+  %   % format(user_error, 'Generated background clauses ~w~n', [ClBG]),
+  %   assert_all(ClBG,M,ClBGRef),
+  %   retractall(bgc(_)),
+  %   garbage_collect_clauses,
+  % ;
+  %   true
+  % ),
   M:in(R00),
   process_clauses(R00,M,R0),
   statistics(walltime,[_,_]),
@@ -516,6 +540,7 @@ induce_parameters(M:Folds,R):-
   M:local_setting(random_restarts_number,RR),
   number_of_threads(M,Th),
   learn_param(R0,M,Pos,Neg,RR,Th,R1,Score,_MI,_MIN),
+  format(user_error, 'Learned parameters ~w~n', [R1]),
   sort_rules_int(R1,R),
   statistics(walltime,[_,CT]),
   CTS is CT/1000,
@@ -742,11 +767,13 @@ test_clause_prob([],_M,_Exs,MIP,MIP).
 
 test_clause_prob([(H,B,V,_P)|Rest],M,Exs,[MIPH0|MIPT0],[MIPH|MIPT]):-
   maplist(test_ex(V,H,B,M),Exs,L),
+  % format(user_error, 'Clause Module ~w, Head ~w, Body ~w Res ~w~n',[M, H, B, L]),
   sum_list(L,MIP),
   MIPH is MIPH0+MIP,
   test_clause_prob(Rest,M,Exs,MIPT0,MIPT).
 
 test_ex(_V,H,B,M,E,N):-
+  % format(user_error, 'Test ex H ~w B ~w E ~w~n',[H,B,E]),
   findall(1,(H=E,M:B),L),
   length(L,N).
 
@@ -843,7 +870,13 @@ learn_param(Program0,M,Pos,Neg,RR,Th,Program,LL,MI,MIN):-
 clauses_statistics(Pr,N,M,Pos,Neg,MIN0,MI,MIN,Th):-
   (Th=1->
     test_theory_neg_prob(Neg,M,Pr,MIN0,MIN),
-    test_theory_pos_prob(Pos,M,Pr,N,MI)
+    test_theory_pos_prob(Pos,M,Pr,N,MI),
+    length(MI,NMI),
+    length(MIN,MINL)
+    % format(user_error, 'Number of supported pos clauses ~w~n', [NMI]),
+    % format(user_error, 'Supported pos clauses ~w~n', [MI]),
+    % format(user_error, 'Number of supported neg clauses ~w~n', [MINL]),
+    % format(user_error, 'Supported neg clauses ~w~n', [MIN])
   ;
     current_prolog_flag(cpu_count,Cores),
     ((Th=cpu;Th>Cores)->
@@ -857,7 +890,13 @@ clauses_statistics(Pr,N,M,Pos,Neg,MIN0,MI,MIN,Th):-
     concurrent_maplist(test_theory_pos_prob_conc(Pr,M,N),PosC,MIC),
     append(MIC,MI),
     transpose(MINC,MINT),
-    maplist(sum_list,MINT,MIN)
+    maplist(sum_list,MINT,MIN),
+    length(MI,NMI),
+    length(MIN,MINL)
+    % format(user_error, 'Number of supported pos clauses ~w~n', [NMI]),
+    % format(user_error, 'Supported pos clauses ~w~n', [MI]),
+    % format(user_error, 'Number of supported neg clauses ~w~n', [MINL]),
+    % format(user_error, 'Supported neg clauses ~w~n', [MIN])
   ).
 
 test_theory_neg_prob_conc(Pr,M,MIN0,Neg,MIN):-
@@ -2927,9 +2966,9 @@ add_bdd_arg_db(A,_Env,_BDD,DB,Module,A1):-
   append(Args,[DB],Args1),
   A1=..[P,Module|Args1].
 
-add_mod_arg(A,Module,A1):-
-  A=..[P|Args],
-  A1=..[P,Module|Args].
+add_mod_arg(A,Module,A):-
+  A=..[P|Args].
+  % A1=..[P,Module|Args].
 
 
 generate_rules_fact([],_Env,_VC,_R,_Probs,_N,[],_Module).
@@ -3234,6 +3273,9 @@ builtin_int(G):-
 builtin_int(G):-
   predicate_property(G,imported_from(clpfd)).
 
+builtin_int(G):-
+  predicate_property(G, imported_from(janus)).
+
 
 
 term_expansion_int((Head :- Body),M, (_Clauses,[rule(R,HeadList,BodyList,true)])) :-
@@ -3339,7 +3381,9 @@ ll(M,P- _,LL0,LL):-
 
 find_ex(DB,M,Pos,Neg,NPos,NNeg):-
   M:local_setting(neg_ex,given),!,
+  % format(user_error, 'find_ex - Given predicate: ~w~n',[M:output(P/A)]),
   M:output(P/A),!,
+  % format(user_error, 'find_ex - Output predicate: ~w~n',[P/A]),
   find_ex_pred([P/A],M,DB,[],Pos,[],Neg),
   length(Pos,NPos),
   length(Neg,NNeg).
@@ -3356,6 +3400,7 @@ find_ex_pred([],_M,_DB,Pos,Pos,Neg,Neg).
 
 find_ex_pred([P/A|T],M,DB,Pos0,Pos,Neg0,Neg):-
   functor(At,P,A),
+  % format(user_error, 'find_ex_pred - Predicate: ~w,~w,~w~n',[At, P, A]),
   find_ex_db(DB,M,At,Pos0,Pos1,Neg0,Neg1),
   find_ex_pred(T,M,DB,Pos1,Pos,Neg1,Neg).
 
@@ -3364,6 +3409,8 @@ find_ex_db([],_M,_At,Pos,Pos,Neg,Neg).
 find_ex_db([H|T],M,At,Pos0,Pos,Neg0,Neg):-
   At=..[P|L],
   At1=..[P,H|L],
+  % format(user_error, 'find_ex_db - Predicate At: ~w~n',[At]),
+  % format(user_error, 'find_ex_db - Predicate At1: ~w~n',[At1]),
   findall(At1,M:At1,LP),
   findall(At1,M:neg(At1),LN),
   append([Pos0,LP],Pos1),
@@ -4321,11 +4368,3 @@ user:term_expansion(In, Out) :-
   lift_file(Source),
   prolog_load_context(source, Source),
   lift_expansion(In, Out).
-
-
-
-
-
-
-%
-
