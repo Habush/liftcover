@@ -21,7 +21,7 @@ Copyright (c) 2016, Fabrizio Riguzzi and Elena Bellodi
 
 */
 :-module(liftcover,[set_lift/2,setting_lift/2,
-  induce_lift/2,induce_par_lift/2,test_lift/7,
+  induce_lift/2,induce_par_lift/2,induce_par_lift/3,test_lift/7,
   filter_rules/2,filter_rules/3,sort_rules/2,
   remove_zero/2,
   op(500,fx,#),op(500,fx,'-#'),
@@ -76,7 +76,9 @@ Copyright (c) 2016, Fabrizio Riguzzi and Elena Bellodi
 :- meta_predicate induce_lift(:,-).
 :- meta_predicate induce_rules(:,-).
 :- meta_predicate induce_par_lift(:,-).
+:- meta_predicate induce_par_lift(:,-,-).
 :- meta_predicate induce_parameters(:,-).
+:- meta_predicate induce_parameters(:,-,-).
 
 
 
@@ -317,7 +319,7 @@ learn_struct(Pos,Neg,Mod,Beam,R,Score):-  %+Beam:initial theory of the form [rul
   length(LC,NumCL),
   write2(Mod,"Final parameter learning"),nl2(Mod),
   Mod:local_setting(random_restarts_number,RR),
-  learn_param_int(MI,MIN,NumCL,Mod,RR,Par,Score),
+  learn_param_int(MI,MIN,NumCL,Mod,RR,Par,Score,_Eta),
   update_theory(LC,Par,Program1),
   remove_zero(Program1,R),
   format2(Mod,"Best target theory~n~n",[]),
@@ -491,10 +493,16 @@ processor(M,Proc):-
  * It returns in P the input program with the updated parameters.
  */
 induce_par_lift(Folds,ROut):-
-  induce_parameters(Folds,R),
+  induce_par_lift(Folds,ROut,_).
+
+induce_par_lift(Folds,ROut,FinalEta):-
+  induce_parameters(Folds,R,FinalEta),
   rules2terms(R,ROut).
 
 induce_parameters(M:Folds,R):-
+  induce_parameters(M:Folds,R,_).
+
+induce_parameters(M:Folds,R,FinalEta):-
   load_python_module(M),
   make_dynamic(M),
   M:local_setting(seed,Seed),
@@ -539,7 +547,7 @@ induce_parameters(M:Folds,R):-
   find_ex(DB,M,Pos,Neg,_NPos,_NNeg),
   M:local_setting(random_restarts_number,RR),
   number_of_threads(M,Th),
-  learn_param(R0,M,Pos,Neg,RR,Th,R1,Score,_MI,_MIN),
+  learn_param(R0,M,Pos,Neg,RR,Th,R1,Score,_MI,_MIN,FinalEta),
   format(user_error, 'Learned parameters ~w~n', [R1]),
   sort_rules_int(R1,R),
   statistics(walltime,[_,CT]),
@@ -653,7 +661,7 @@ induce_parameters_kg(M,Rel,MI,MIN,Par):-
   format4(M,'Tuning parameters for relation ~w~n',[Rel]),
   M:local_setting(random_restarts_number,RR),
   length(MI,N),
-  learn_param_int(MI,MIN,N,M,RR,Par,_LL).
+  learn_param_int(MI,MIN,N,M,RR,Par,_LL,_Eta).
 
 rules_for_rel(M:Rules,Rel,RulesRel):-
   assert(M:rules(Rules)),
@@ -852,17 +860,17 @@ oi(Vars):-
 
 
 
-learn_param([],M,_,_,_,_,[],MInf,[],[]):-!,
+learn_param([],M,_,_,_,_,[],MInf,[],[],[]):-!,
   M:local_setting(minus_infinity,MInf).
 
-learn_param(Program0,M,Pos,Neg,RR,Th,Program,LL,MI,MIN):-
+learn_param(Program0,M,Pos,Neg,RR,Th,Program,LL,MI,MIN,FinalEta):-
   generate_clauses(Program0,M,0,Pr1),
   length(Program0,N),
   format4(M,'Computing clause statistics~n',[]),
   gen_initial_counts(N,MIN0),
   clauses_statistics(Pr1,N,M,Pos,Neg,MIN0,MI,MIN,Th),
   format4(M,'Updating parameters~n',[]),
-  learn_param_int(MI,MIN,N,M,RR,Par,LL),
+  learn_param_int(MI,MIN,N,M,RR,Par,LL,FinalEta),
   update_theory(Program0,Par,Program1),
   remove_zero(Program1,Program).
 
@@ -938,7 +946,7 @@ split_list(L0,N,NL,[H|L]):-
 %learn_param_int(_MI,[],_N,_M,_NR,[],-inf):-!,
 %  writeln("No rules").
 
-learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
+learn_param_int(MI,MIN,_N,M,NR,Par,LL,[]):-
   M:local_setting(parameter_learning,em_torch),!,
   M:local_setting(eps,EA),
   M:local_setting(eps_f,ER),
@@ -963,12 +971,12 @@ learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
   format3(M,"Final LL ~f~n",[LL]).
 
 
-learn_param_int(MI,MIN,N,M,NR,Par,LL):-
+learn_param_int(MI,MIN,N,M,NR,Par,LL,FinalEta):-
   M:local_setting(parameter_learning,em),!,
-  random_restarts(0,NR,M,-1e20,LL,N,initial,Par,MI,MIN),
+  random_restarts(0,NR,M,-1e20,LL,N,initial,Par,[],FinalEta,MI,MIN),
   format3(M,"Final LL ~f~n",[LL]).
 
-learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
+learn_param_int(MI,MIN,_N,M,NR,Par,LL,[]):-
   M:local_setting(parameter_learning,em_python),!,
   M:local_setting(eps,EA),
   M:local_setting(eps_f,ER),
@@ -982,7 +990,7 @@ learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
   py_call(liftcover:random_restarts(MI,MIN,Device,NR,Iter,EA,ER,Reg,Zero,Gamma,A,B,Verb),-(Par,LL)),
   format3(M,"Final LL ~f~n",[LL]).
 
-learn_param_int(MI,MIN,N,M,NR,Par,LL):-
+learn_param_int(MI,MIN,N,M,NR,Par,LL,[]):-
   M:local_setting(parameter_learning,gd),!,
   random_restarts_gd(0,NR,M,-1e20,PLL,N,initial,ParR,MI,MIN),  %computes new parameters Par
   maplist(logistic,ParR,Par),
@@ -990,7 +998,7 @@ learn_param_int(MI,MIN,N,M,NR,Par,LL):-
   format3(M,"Final LL ~f~n",[LL]).
 
 
-learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
+learn_param_int(MI,MIN,_N,M,NR,Par,LL,[]):-
   M:local_setting(parameter_learning,gd_python),!,
   M:local_setting(verbosity,Verb),
   M:local_setting(parameter_update,UpdateMethod),
@@ -1012,7 +1020,7 @@ learn_param_int(MI,MIN,_N,M,NR,Par,LL):-
   format3(M,"Final LL ~f~n",[LL]).
 
 
-learn_param_int(MI,MIN,N,M,_,Par,LL):-
+learn_param_int(MI,MIN,N,M,_,Par,LL,[]):-
   M:local_setting(parameter_learning,lbfgs),
   optimizer_initialize(N,liftcover,evaluate,progress,[M,MIN,MI],Env),
   init_par(Env,N),
@@ -1046,9 +1054,9 @@ new_pars_lbfgs(Env,M,N,NMax,[P|Rest1]):-
     new_pars_lbfgs(Env,M,N1,NMax,Rest1).
 
 
-random_restarts(N,N,_M,Score,Score,_N,Par,Par,_MI,_MIN):-!.
+random_restarts(N,N,_M,Score,Score,_N,Par,Par,Eta,Eta,_MI,_MIN):-!.
 
-random_restarts(N,NMax,M,Score0,Score,NR,Par0,Par,MI,MIN):-
+random_restarts(N,NMax,M,Score0,Score,NR,Par0,Par,Eta0,Eta,MI,MIN):-
   N1 is N+1,
   format3(M,"Restart number ~d~n~n",[N1]),
   length(Par1,NR),
@@ -1056,12 +1064,12 @@ random_restarts(N,NMax,M,Score0,Score,NR,Par0,Par,MI,MIN):-
   M:local_setting(eps,EA),
   M:local_setting(eps_f,ER),
   M:local_setting(iter,Iter),
-  em(EA,ER,0,Iter,M,NR,Par1,-1e20,MI,MIN,ParR,ScoreR),
+  em(EA,ER,0,Iter,M,NR,Par1,-1e20,MI,MIN,ParR,ScoreR,EtaR),
   format3(M,"Random_restart: Score ~f~n",[ScoreR]),
   (ScoreR>Score0->
-    random_restarts(N1,NMax,M,ScoreR,Score,NR,ParR,Par,MI,MIN)
+    random_restarts(N1,NMax,M,ScoreR,Score,NR,ParR,Par,EtaR,Eta,MI,MIN)
   ;
-    random_restarts(N1,NMax,M,Score0,Score,NR,Par0,Par,MI,MIN)
+    random_restarts(N1,NMax,M,Score0,Score,NR,Par0,Par,Eta0,Eta,MI,MIN)
   ).
 
 random_restarts_gd(N,N,_M,Score,Score,_N,Par,Par,_MI,_MIN):-!.
@@ -1244,7 +1252,7 @@ compute_sum_neg_gd([HMI|TMI],M,[HLN|TLN],I,S0,S):-
 
 em(_EA,_ER,MaxIter,MaxIter,_M,_NR,Par,Score,_MI,_MIN,Par,Score):-!.
 
-em(EA,ER,Iter0,MaxIter,M,NR,Par0,Score0,MI,MIN,Par,Score):-
+em(EA,ER,Iter0,MaxIter,M,NR,Par0,Score0,MI,MIN,Par,Score,FinalEta):-
   length(Eta0,NR),
   expectation_quick(Par0,M,MI,MIN,Eta0,Eta,Score1),
   Iter is Iter0+1,
@@ -1254,9 +1262,10 @@ em(EA,ER,Iter0,MaxIter,M,NR,Par0,Score0,MI,MIN,Par,Score):-
   Fract is -Score1*ER,
   (( Diff<EA;Diff<Fract)->
     Score=Score1,
-    Par=Par1
+    Par=Par1,
+    FinalEta=Eta
   ;
-    em(EA,ER,Iter,MaxIter,M,NR,Par1,Score1,MI,MIN,Par,Score)
+    em(EA,ER,Iter,MaxIter,M,NR,Par1,Score1,MI,MIN,Par,Score,FinalEta)
   ).
 
 expectation_quick(Par,M,MI,MIN,Eta0,Eta,Score):-
@@ -1458,7 +1467,7 @@ score_clause_refinements_int(M,Nrev,Pos,Neg,[R1|T],NB,CL):-
   format3(M,'Score ref.  ~d~n',[Nrev]),
   write_rules3(M,[R1],user_output),
   M:local_setting(random_restarts_number_str_learn,NR),
-  learn_param([R1],M,Pos,Neg,NR,1,NewR,Score,MI,MIN),
+  learn_param([R1],M,Pos,Neg,NR,1,NewR,Score,MI,MIN,_Eta),
   write3(M,'Updated refinement\n'),
   write_rules3(M,NewR,user_output),
   write3(M,'Score (CLL) '),write3(M,Score),write3(M,'\n\n\n'),
@@ -3898,12 +3907,15 @@ prob_lift(M:H,R00,P):-
   prob_lift_int(H,M,Prog,P).
 
 prob_lift_int(H,M,Prog,P):-
+  % format('Input H ~w~nProg ~w~n', [H, Prog]),
   (M:local_setting(single_var,true)->
     theory_counts_sv(Prog,M,H,MI)
   ;
     theory_counts(Prog,M,H,MI)
   ),
+  % format('Count ~w~n', [MI]),
   compute_prob_ex(Prog,MI,1,PG0),
+  % format('Neg Prob ~w~n', PG0),
   P is 1-PG0.
 
 theory_counts([],_M,_H,[]).
@@ -3914,7 +3926,9 @@ theory_counts([(H,B,_V,_P)|Rest],M,E,[MI|RestMI]):-
 
 
 test_rule(H,B,M,E,N):-
+%  format('[Test Rule] E ~w~nHead ~w~nBody ~w~n', [E, H, B]),
  findall(1,(H=E,M:B),L),
+%  format('FindAll ~w~n', [L]),
  length(L,N).
 /*
   term_variables(B,Vars),
@@ -4304,6 +4318,7 @@ lift_expansion(At, A) :-
 :- multifile sandbox:safe_meta/2.
 
 sandbox:safe_meta(liftcover:induce_par_lift(_,_) ,[]).
+sandbox:safe_meta(liftcover:induce_par_lift(_,_,_) ,[]).
 sandbox:safe_meta(liftcover:induce_lift(_,_), []).
 sandbox:safe_meta(liftcover:test_prob_lift(_,_,_,_,_,_), []).
 sandbox:safe_meta(liftcover:test_lift(_,_,_,_,_,_,_), []).
